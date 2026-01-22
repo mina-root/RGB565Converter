@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RGB565 変換ツール</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 RGB565 変換ツール</h1>
+        <p class="subtitle">画像を16ビットRGB565形式に変換します</p>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">ここをクリックして画像を選択</div>
+            <div class="upload-hint">
+                または、ドラッグ&ドロップ / Ctrl+V で貼り付け<br>
+                対応形式: PNG, JPEG, BMP, GIF, WebP
+            </div>
+        </div>
+
+        <input type="file" id="fileInput" accept="image/*">
+
+        <div class="loading" id="loading">
+            🔄 変換中...
+        </div>
+
+        <div class="preview-section" id="previewSection">
+            <div class="preview-box">
+                <div class="preview-title">
+                    <span>📸</span>
+                    <span>元画像</span>
+                </div>
+                <div class="canvas-container" onclick="focusImage('originalCanvas')" style="cursor: pointer;">
+                    <canvas id="originalCanvas"></canvas>
+                </div>
+                <div class="button-group">
+                    <button class="btn-secondary" onclick="resetImage()">🔄 リセット</button>
+                </div>
+                <div class="filter-section">
+                    <div class="filter-title">🎨 フィルター</div>
+                    <div class="filter-buttons">
+                        <button class="filter-btn" onclick="applyFilter('none')">オリジナル</button>
+                        <button class="filter-btn" onclick="applyFilter('grayscale')">グレースケール</button>
+                        <button class="filter-btn" onclick="applyFilter('sepia')">セピア</button>
+                        <button class="filter-btn" onclick="applyFilter('invert')">反転</button>
+                        <button class="filter-btn" onclick="applyFilter('brightness')">明るく</button>
+                        <button class="filter-btn" onclick="applyFilter('contrast')">コントラスト</button>
+                    </div>
+                    <div class="filter-control" id="filterControl">
+                        <div class="filter-control-header">
+                            <span class="filter-control-label" id="filterLabel">フィルター強度</span>
+                            <span class="filter-control-value" id="filterValue">100%</span>
+                        </div>
+                        <input type="range" class="filter-slider" id="filterSlider" min="0" max="100" value="100">
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview-box">
+                <div class="preview-title">
+                    <span>✨</span>
+                    <span>RGB565変換後</span>
+                </div>
+                <div class="canvas-container" onclick="focusImage('rgb565Canvas')" style="cursor: pointer;">
+                    <canvas id="rgb565Canvas"></canvas>
+                </div>
+                <div class="button-group">
+                    <button class="btn-primary" onclick="copyToClipboard()">📋 コピー</button>
+                    <button class="btn-primary" onclick="downloadImage()">💾 ダウンロード</button>
+                    <button class="btn-secondary" onclick="exportCArray()">💻 C配列</button>
+                </div>
+                <div class="dithering-section">
+                    <div class="dithering-header">
+                        <label class="dithering-toggle">
+                            <input type="checkbox" id="ditheringEnabled" onchange="toggleDithering()">
+                            <span>🎨 ディザリングを有効化</span>
+                        </label>
+                    </div>
+                    <div class="dithering-options" id="ditheringOptions">
+                        <label class="radio-label">
+                            <input type="radio" name="ditheringType" value="floyd-steinberg" checked onchange="updateDithering()">
+                            <span>Floyd-Steinberg</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="ditheringType" value="ordered" onchange="updateDithering()">
+                            <span>Ordered (Bayer)</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="ditheringType" value="atkinson" onchange="updateDithering()">
+                            <span>Atkinson</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <p><strong>RGB565とは？</strong></p>
+            <p>RGB565は16ビットカラーフォーマットで、赤5ビット、緑6ビット、青5ビットで色を表現します。</p>
+            <p>このフォーマットは、メモリ使用量を削減しつつ、比較的良好な色再現性を提供するため、組み込みシステムで広く使用されています。</p>
+            <p><strong>ディザリングとは？</strong></p>
+            <p>ディザリングは、画像の色数を減らす際に発生するバンディング（階調の段差）を軽減する技術です。</p>
+            <p>ディザリングを適用することで、より滑らかで自然な見た目の画像を得ることができますが、</p>
+            <p>意図的にノイズを加える処理であるため、画像がざらついて見えることがあります。</p>
+        </div>
+
+        <footer class="footer">© Minamoto</footer>
+    </div>
+
+    <!-- 画像フォーカス用モーダル -->
+    <div class="modal" id="imageFocusModal">
+        <div class="image-focus-content">
+            <button class="image-focus-close" onclick="closeFocusModal()">✕</button>
+            <div class="image-focus-canvas-container">
+                <canvas id="imageFocusCanvas"></canvas>
+            </div>
+            <div class="image-focus-toolbar">
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomOut()">🔍− 縮小</button>
+                    <button class="zoom-btn" onclick="resetZoom()">1:1</button>
+                    <button class="zoom-btn" onclick="zoomIn()">🔍+ 拡大</button>
+                </div>
+                <div class="zoom-level" id="zoomLevelDisplay">100%</div>
+                <div class="antialiasing-control">
+                    <label class="antialiasing-label">
+                        <input type="checkbox" id="antialiasingEnabled" checked>
+                        <span>スムーズ</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- C配列出力用モーダル -->
+    <div class="modal" id="cArrayModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">💻 C配列形式</div>
+                <button class="close-btn" onclick="closeCArrayModal()">×</button>
+            </div>
+            <div class="button-group" style="margin-bottom: 15px;">
+                <button class="btn-primary" onclick="copyCArray()">📋 コピー</button>
+                <button class="btn-primary" onclick="downloadCArray()">💾 ダウンロード</button>
+            </div>
+            <div class="code-container" id="cArrayOutput"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
