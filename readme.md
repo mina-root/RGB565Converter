@@ -10,11 +10,19 @@
 
 - **画像アップロード**: PNG、JPEG、BMP、GIF、WebPに対応
 - **リアルタイムプレビュー**: 変換前後の画像を比較表示
-- **フィルター**: グレースケール、セピア、反転、明るさ、コントラスト調整
+- **フィルター機能**:
+  - グレースケール、セピア、反転、明るさ、コントラスト調整、エッジ強調（アンシャープマスク）
 - **ディザリング**: Floyd-Steinberg、Ordered (Bayer)、Atkinson ディザリングに対応
+- **リサイズ機能**:
+  - **倍率指定**: 10%～500%での拡大縮小
+  - **絶対サイズ指定**: ピクセル単位での任意サイズ変更
+  - **複数の補間アルゴリズム**: Nearest Neighbor、Bilinear、Bicubic
+  - **アスペクト比ロック**: 縦横比を固定したまま片方のサイズを変更可能
+  - **リアルタイム自動更新**: 設定変更時に即座に反映
 - **複数の出力形式**:
   - PNG画像として保存
   - C言語配列形式（.h ファイル）としてエクスポート
+- **ファイル名保持**: 保存時に元のファイル名を自動的に含める
 - **拡大/縮小表示**: ズーム機能で詳細確認
 - **ドラッグ&ドロップ対応**: ファイルを直接ドラッグ
 - **クリップボード貼り付け**: Ctrl+Vで画像を貼り付け
@@ -64,22 +72,6 @@ RGB565Converter/
 - **C配列形式**: 実際のRGB565 16ビット値（`uint16_t`）で出力されます
 - **用途**: マイコンやマイクロコントローラーで直接使用できる形式です
 - **推奨**: 組み込み機器向けに使用する場合はC配列形式での出力を推奨します
-
-## 📄 ライセンス
-
-```
-
-MIT License
-
-Copyright (c) 2026 Minamoto
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-```
 
 ---
 
