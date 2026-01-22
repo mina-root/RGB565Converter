@@ -203,6 +203,27 @@ button:disabled {
     border-top: 2px solid #e0e0e0;
 }
 
+.resize-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #e0e0e0;
+}
+
+.resize-content {
+    max-height: 1000px;
+    opacity: 1;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                opacity 0.3s ease-out;
+    display: block;
+}
+
+.resize-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
 .filter-title {
     font-size: 1.1em;
     font-weight: bold;
@@ -238,6 +259,13 @@ button:disabled {
 .filter-btn.active {
     background: #667eea;
     color: white;
+}
+
+.resize-control {
+    padding: 15px;
+    background: #f8f9ff;
+    border-radius: 10px;
+    margin-bottom: 10px;
 }
 
 .filter-control {
@@ -279,6 +307,10 @@ button:disabled {
     outline: none;
     -webkit-appearance: none;
     cursor: pointer;
+}
+
+#scaleSlider {
+    width: 100%;
 }
 
 .filter-slider::-webkit-slider-thumb {

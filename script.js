@@ -18,6 +18,13 @@ let zoomLevel = 1;
 let panX = 0;
 let panY = 0;
 let isWheelZoom = false;
+let resizeMode = 'scale';
+let originalAspectRatio = 1;
+let resizeSectionExpanded = true;
+let lastResizedDimension = 'width'; // 最後に変更されたディメンション
+let resizedWidth = null; // リサイズされた幅
+let resizedHeight = null; // リサイズされた高さ
+let isApplyingResize = false; // リサイズ中フラグ
 
 // アップロードエリアをクリック
 uploadArea.addEventListener('click', () => {
@@ -99,6 +106,15 @@ function handleFile(file) {
             originalImage = img;
             currentFilter = 'none';
             filterIntensity = 1.0;
+            
+            // アスペクト比を保存
+            originalAspectRatio = img.width / img.height;
+            
+            // リサイズ設定をリセット
+            document.getElementById('scaleSlider').value = 100;
+            document.getElementById('scaleValue').textContent = '100%';
+            document.getElementById('widthInput').value = img.width;
+            document.getElementById('heightInput').value = img.height;
             
             // 元画像を描画
             originalCanvas.width = img.width;
@@ -291,18 +307,48 @@ function applyFilter(filterType, skipButtonUpdate = false) {
                 data[i + 2] = Math.min(255, Math.max(0, factor * (data[i + 2] - 128) + 128));
             }
             break;
+            
+        case 'edge':
+            // エッジ強調（アンシャープマスク）
+            applyEdgeFilter(imageData, filterIntensity);
+            break;
     }
     
     originalCtx.putImageData(imageData, 0, 0);
     
     // フィルター適用後の画像でRGB565変換
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = originalImage.width;
-    tempCanvas.height = originalImage.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.putImageData(imageData, 0, 0);
+    let sourceCanvas = document.createElement('canvas');
     
-    convertToRGB565FromCanvas(tempCanvas);
+    // リサイズが適用されている場合は、リサイズサイズで処理
+    if (resizedWidth !== null && resizedHeight !== null) {
+        sourceCanvas.width = resizedWidth;
+        sourceCanvas.height = resizedHeight;
+        const ctx = sourceCanvas.getContext('2d');
+        const algorithm = document.getElementById('interpolationAlgorithm').value;
+        
+        // フィルター済みの画像をリサイズ
+        switch(algorithm) {
+            case 'nearest':
+                ctx.imageSmoothingEnabled = false;
+                break;
+            case 'bilinear':
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'low';
+                break;
+            case 'bicubic':
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                break;
+        }
+        ctx.drawImage(originalCanvas, 0, 0, resizedWidth, resizedHeight);
+    } else {
+        sourceCanvas.width = originalImage.width;
+        sourceCanvas.height = originalImage.height;
+        const tempCtx = sourceCanvas.getContext('2d');
+        tempCtx.putImageData(imageData, 0, 0);
+    }
+    
+    convertToRGB565FromCanvas(sourceCanvas);
 }
 
 // ディザリング処理
@@ -465,7 +511,10 @@ function toggleDithering() {
     }
     
     if (originalImage) {
-        if (currentFilter !== 'none') {
+        // リサイズ情報を保持したまま再変換
+        if (resizedWidth !== null && resizedHeight !== null) {
+            applyResize();
+        } else if (currentFilter !== 'none') {
             applyFilter(currentFilter, true);
         } else {
             convertToRGB565(originalImage);
@@ -478,7 +527,10 @@ function updateDithering() {
     ditheringType = document.querySelector('input[name="ditheringType"]:checked').value;
     
     if (ditheringEnabled && originalImage) {
-        if (currentFilter !== 'none') {
+        // リサイズ情報を保持したまま再変換
+        if (resizedWidth !== null && resizedHeight !== null) {
+            applyResize();
+        } else if (currentFilter !== 'none') {
             applyFilter(currentFilter, true);
         } else {
             convertToRGB565(originalImage);
@@ -729,4 +781,194 @@ if (antialiasingCheckbox) {
     antialiasingCheckbox.addEventListener('change', () => {
         updateFocusCanvasDisplay();
     });
+}
+
+// リサイズ機能
+// リサイズセクションの開閉
+function toggleResizeSection() {
+    resizeSectionExpanded = !resizeSectionExpanded;
+    const resizeContent = document.getElementById('resizeContent');
+    const arrow = document.getElementById('resizeSectionArrow');
+    
+    if (resizeSectionExpanded) {
+        resizeContent.classList.remove('collapsed');
+        arrow.textContent = '▼';
+    } else {
+        resizeContent.classList.add('collapsed');
+        arrow.textContent = '▶';
+    }
+}
+
+function toggleResizeMode() {
+    resizeMode = document.querySelector('input[name="resizeMode"]:checked').value;
+    document.getElementById('scaleMode').style.display = resizeMode === 'scale' ? 'block' : 'none';
+    document.getElementById('sizeMode').style.display = resizeMode === 'size' ? 'block' : 'none';
+}
+
+function updateScale() {
+    const scale = document.getElementById('scaleSlider').value;
+    document.getElementById('scaleValue').textContent = scale + '%';
+    
+    // 自動でリサイズを実行
+    applyResize();
+}
+
+function updateSize() {
+    const widthInput = document.getElementById('widthInput');
+    const heightInput = document.getElementById('heightInput');
+    const aspectRatioLock = document.getElementById('aspectRatioLock').checked;
+    
+    const width = parseFloat(widthInput.value);
+    const height = parseFloat(heightInput.value);
+    
+    if (isNaN(width) || isNaN(height)) return;
+    
+    if (aspectRatioLock) {
+        // イベント発火元を判定して自動計算
+        const activeElement = document.activeElement;
+        if (activeElement === widthInput) {
+            // 幅が変更された → 高さを再計算
+            heightInput.value = Math.round(width / originalAspectRatio);
+            lastResizedDimension = 'width';
+        } else if (activeElement === heightInput) {
+            // 高さが変更された → 幅を再計算
+            widthInput.value = Math.round(height * originalAspectRatio);
+            lastResizedDimension = 'height';
+        }
+    }
+    
+    // 自動でリサイズを実行
+    applyResize();
+}
+
+// widthInputとheightInputにイベントリスナーを設定
+document.addEventListener('DOMContentLoaded', () => {
+    const widthInput = document.getElementById('widthInput');
+    const heightInput = document.getElementById('heightInput');
+    
+    if (widthInput) widthInput.addEventListener('input', updateSize);
+    if (heightInput) heightInput.addEventListener('input', updateSize);
+});
+
+function applyResize() {
+    if (!originalImage) {
+        return;
+    }
+    
+    let newWidth, newHeight;
+    
+    if (resizeMode === 'scale') {
+        const scale = parseFloat(document.getElementById('scaleSlider').value) / 100;
+        newWidth = Math.round(originalImage.width * scale);
+        newHeight = Math.round(originalImage.height * scale);
+    } else {
+        newWidth = parseFloat(document.getElementById('widthInput').value);
+        newHeight = parseFloat(document.getElementById('heightInput').value);
+        
+        if (isNaN(newWidth) || isNaN(newHeight)) {
+            return;
+        }
+    }
+    
+    const algorithm = document.getElementById('interpolationAlgorithm').value;
+    
+    // リサイズされたサイズを保存
+    resizedWidth = newWidth;
+    resizedHeight = newHeight;
+    isApplyingResize = true;
+    
+    // リサイズを実行
+    const resizedImage = resizeImage(originalImage, newWidth, newHeight, algorithm);
+    
+    // キャンバスに描画
+    originalCanvas.width = newWidth;
+    originalCanvas.height = newHeight;
+    originalCtx.drawImage(resizedImage, 0, 0);
+    
+    // RGB565に再変換（フィルター情報を保持）
+    if (currentFilter !== 'none') {
+        applyFilter(currentFilter, true);
+    } else {
+        convertToRGB565(resizedImage);
+    }
+    
+    isApplyingResize = false;
+}
+
+function resizeImage(img, newWidth, newHeight, algorithm) {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = newWidth;
+    tempCanvas.height = newHeight;
+    const ctx = tempCanvas.getContext('2d');
+    
+    switch(algorithm) {
+        case 'nearest':
+            ctx.imageSmoothingEnabled = false;
+            break;
+        case 'bilinear':
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'low';
+            break;
+        case 'bicubic':
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            break;
+    }
+    
+    ctx.drawImage(img, 0, 0, newWidth, newHeight);
+    return tempCanvas;
+}
+
+function applyEdgeFilter(imageData, intensity = 1.0) {
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+    
+    // ガウスぼかし用のカーネル（5x5より強いぼかし）
+    const gaussianKernel = [
+        [1, 4, 6, 4, 1],
+        [4, 16, 24, 16, 4],
+        [6, 24, 36, 24, 6],
+        [4, 16, 24, 16, 4],
+        [1, 4, 6, 4, 1]
+    ];
+    const kernelSum = 256;
+    
+    // ぼかし画像を作成
+    const blurred = new Uint8ClampedArray(data.length);
+    
+    for (let y = 2; y < height - 2; y++) {
+        for (let x = 2; x < width - 2; x++) {
+            let sum_r = 0, sum_g = 0, sum_b = 0;
+            
+            // ガウスぼかしを適用（5x5カーネル）
+            for (let dy = -2; dy <= 2; dy++) {
+                for (let dx = -2; dx <= 2; dx++) {
+                    const pidx = ((y + dy) * width + (x + dx)) * 4;
+                    const weight = gaussianKernel[dy + 2][dx + 2];
+                    sum_r += data[pidx] * weight;
+                    sum_g += data[pidx + 1] * weight;
+                    sum_b += data[pidx + 2] * weight;
+                }
+            }
+            
+            const idx = (y * width + x) * 4;
+            blurred[idx] = sum_r / kernelSum;
+            blurred[idx + 1] = sum_g / kernelSum;
+            blurred[idx + 2] = sum_b / kernelSum;
+            blurred[idx + 3] = data[idx + 3];
+        }
+    }
+    
+    // アンシャープマスク: 元画像 + (元画像 - ぼかし画像) * intensity * 倍率係数
+    const strengthFactor = 2.0; // エッジ強度を2倍にする
+    for (let i = 0; i < data.length; i += 4) {
+        const diff_r = data[i] - blurred[i];
+        const diff_g = data[i + 1] - blurred[i + 1];
+        const diff_b = data[i + 2] - blurred[i + 2];
+        
+        data[i] = Math.min(255, Math.max(0, data[i] + diff_r * intensity * strengthFactor));
+        data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + diff_g * intensity * strengthFactor));
+        data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + diff_b * intensity * strengthFactor));
+    }
 }

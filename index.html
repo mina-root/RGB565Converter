@@ -47,6 +47,7 @@
                         <button class="filter-btn" onclick="applyFilter('invert')">反転</button>
                         <button class="filter-btn" onclick="applyFilter('brightness')">明るく</button>
                         <button class="filter-btn" onclick="applyFilter('contrast')">コントラスト</button>
+                        <button class="filter-btn" onclick="applyFilter('edge')">エッジ</button>
                     </div>
                     <div class="filter-control" id="filterControl">
                         <div class="filter-control-header">
@@ -54,6 +55,56 @@
                             <span class="filter-control-value" id="filterValue">100%</span>
                         </div>
                         <input type="range" class="filter-slider" id="filterSlider" min="0" max="100" value="100">
+                    </div>
+                </div>
+                <div class="resize-section">
+                    <div class="filter-title" onclick="toggleResizeSection()" style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <span id="resizeSectionArrow">▼</span>
+                        <span>📐 解像度変更</span>
+                    </div>
+                    <div id="resizeContent" class="resize-content">
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <input type="radio" name="resizeMode" value="scale" checked onchange="toggleResizeMode()">
+                                <span>倍率指定</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px;">
+                                <input type="radio" name="resizeMode" value="size" onchange="toggleResizeMode()">
+                                <span>サイズ指定</span>
+                            </label>
+                        </div>
+                        <div id="scaleMode" class="resize-control">
+                            <div style="margin-bottom: 10px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">倍率: <span id="scaleValue">100%</span></label>
+                                <input type="range" id="scaleSlider" min="10" max="500" value="100" oninput="updateScale()">
+                            </div>
+                        </div>
+                        <div id="sizeMode" class="resize-control" style="display: none;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">幅 (px)</label>
+                                    <input type="number" id="widthInput" min="1" placeholder="幅">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">高さ (px)</label>
+                                    <input type="number" id="heightInput" min="1" placeholder="高さ">
+                                </div>
+                            </div>
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="aspectRatioLock" checked>
+                                <span>縦横比を固定</span>
+                            </label>
+                        </div>
+                        <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid #e0e0e0;">
+                            <div style="margin-bottom: 10px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">アルゴリズム</label>
+                                <select id="interpolationAlgorithm" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 5px;">
+                                    <option value="nearest">Nearest Neighbor（くっきり、ドット感強）</option>
+                                    <option value="bilinear" selected>Bilinear（バランス型、適度に滑らか）</option>
+                                    <option value="bicubic">Bicubic（滑らか、写真向き）</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
